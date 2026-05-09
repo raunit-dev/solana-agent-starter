@@ -1,49 +1,54 @@
 {
-  "name": "empty",
+  "name": "solana-agent-starter",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "license": "MIT",
+  "description": "Open-source starter for running Solana agent strategies on Temporal — schedules, retries, run logs, and horizontal scaling out of the box.",
+  "keywords": [
+    "temporal",
+    "solana",
+    "agent",
+    "strategy",
+    "starter",
+    "cron",
+    "schedule"
+  ],
   "scripts": {
     "build": "tsc --build",
-    "build.watch": "tsc --build --watch",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
-    "start": "ts-node src/worker.ts",
-    "start.watch": "nodemon src/worker.ts",
-    "workflow": "ts-node src/client.ts",
+    "start:worker:activities": "ts-node src/workers/activity-worker.ts",
+    "start:worker:workflows": "ts-node src/workers/workflow-worker.ts",
+    "start:server": "ts-node src/server.ts",
+    "start:all": "concurrently -n act,wf,api -c blue,magenta,green \"npm:start:worker:activities\" \"npm:start:worker:workflows\" \"npm:start:server\"",
+    "agent": "ts-node src/agent.ts",
     "test": "mocha --exit --require ts-node/register --require source-map-support/register src/mocha/*.test.ts"
   },
-  "nodemonConfig": {
-    "execMap": {
-      "ts": "ts-node"
-    },
-    "ext": "ts",
-    "watch": [
-      "src"
-    ]
-  },
   "dependencies": {
+    "@solana/web3.js": "^1.98.4",
     "@temporalio/activity": "^1.16.0",
     "@temporalio/client": "^1.16.0",
-    "@temporalio/envconfig": "^1.16.0",
     "@temporalio/worker": "^1.16.0",
     "@temporalio/workflow": "^1.16.0",
+    "express": "^4.21.2",
     "nanoid": "3.x"
   },
   "devDependencies": {
     "@temporalio/testing": "^1.16.0",
+    "@tsconfig/node24": "^24.0.0",
+    "@types/express": "^4.17.21",
     "@types/mocha": "8.x",
     "@types/node": "^22.9.1",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "@typescript-eslint/parser": "^8.18.0",
+    "concurrently": "^9.1.0",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-deprecation": "^3.0.0",
     "mocha": "8.x",
-    "nodemon": "^3.1.7",
     "prettier": "^3.4.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.6.3",
-    "@tsconfig/node24": "^24.0.0"
+    "typescript": "^5.6.3"
   }
 }
