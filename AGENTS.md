@@ -35,15 +35,15 @@ HTTP / CLI ──► Temporal Server ──► workflow-worker ──► activit
 | File | Owner | Determinism | Purpose |
 |------|-------|-------------|---------|
 | `src/strategy.ts`              | user | non-deterministic | user's agent logic — fetch, RPC, random, time, env all OK |
-| `src/activities.ts`            | infra | non-deterministic | thin wrapper that exposes `strategy()` as `runStrategy` activity |
-| `src/workflows.ts`             | infra | **deterministic** | calls `runStrategy` via `proxyActivities` with a retry policy. **Never** import Node builtins or call `fetch`/`Date.now()` here. |
-| `src/shared.ts`                | infra | n/a | task queue name + `StrategyInput`/`StrategyOutput` types |
-| `src/workers/activity-worker.ts` | infra | n/a | registers `activities` only — no `workflowsPath` |
-| `src/workers/workflow-worker.ts` | infra | n/a | registers `workflowsPath` only — no `activities` |
 | `src/server.ts`                | infra | n/a | Express HTTP API: `/invoke`, `/invocations/:id`, `/agents*` |
 | `src/agent.ts`                 | infra | n/a | tiny CLI: `deploy / pause / resume / invoke / status / list / retire` |
-| `src/temporal-client.ts`       | infra | n/a | `TemporalClientManager` singleton — shared Temporal `Connection` + `Client` |
-| `src/solana-connection.ts`     | infra | n/a | `SolanaConnectionManager` singleton — shared `@solana/web3.js` `Connection` |
+| `src/shared.ts`                | infra | n/a | task queue name + `StrategyInput`/`StrategyOutput` types |
+| `src/temporal/activities.ts`   | infra | non-deterministic | thin wrapper that exposes `strategy()` as `runStrategy` activity |
+| `src/temporal/workflows.ts`    | infra | **deterministic** | calls `runStrategy` via `proxyActivities` with a retry policy. **Never** import Node builtins or call `fetch`/`Date.now()` here. |
+| `src/temporal/client.ts`       | infra | n/a | `TemporalClientManager` singleton — shared Temporal `Connection` + `Client` |
+| `src/solana/connection.ts`     | infra | n/a | `SolanaConnectionManager` singleton — shared `@solana/web3.js` `Connection` |
+| `src/workers/activity-worker.ts` | infra | n/a | registers `activities` only — no `workflowsPath` |
+| `src/workers/workflow-worker.ts` | infra | n/a | registers `workflowsPath` only — no `activities` |
 
 ## Determinism rules (workflow.ts)
 
@@ -81,9 +81,9 @@ it from there.
 
 Long-lived clients are wrapped as classic `getInstance()` singletons:
 
-- `TemporalClientManager` (`src/temporal-client.ts`) — used by `server.ts` and
+- `TemporalClientManager` (`src/temporal/client.ts`) — used by `server.ts` and
   `agent.ts`. Holds one `Connection` + `Client`. Call `.close()` on shutdown.
-- `SolanaConnectionManager` (`src/solana-connection.ts`) — used by `strategy.ts`.
+- `SolanaConnectionManager` (`src/solana/connection.ts`) — used by `strategy.ts`.
   Reuses one `@solana/web3.js` `Connection` across activity invocations on the
   same worker process.
 

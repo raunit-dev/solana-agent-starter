@@ -28,11 +28,15 @@ That's the whole pitch. The rest of the repo is glue.
 ```
 src/
 ├── strategy.ts                 # ← YOU EDIT THIS. Your agent's logic.
-├── activities.ts               # wraps strategy() as a Temporal activity
-├── workflows.ts                # deterministic shell — calls the activity
-├── shared.ts                   # task queue + types
-├── agent.ts                    # CLI: deploy/pause/resume/invoke/status/list/retire
 ├── server.ts                   # Express HTTP API (invoke + manage agents)
+├── agent.ts                    # CLI: deploy/pause/resume/invoke/status/list/retire
+├── shared.ts                   # task queue + types
+├── temporal/
+│   ├── activities.ts           # wraps strategy() as a Temporal activity
+│   ├── workflows.ts            # deterministic shell — calls the activity
+│   └── client.ts               # TemporalClientManager singleton
+├── solana/
+│   └── connection.ts           # SolanaConnectionManager singleton
 └── workers/
     ├── activity-worker.ts      # registers activities only
     └── workflow-worker.ts      # registers workflows only
