@@ -1,5 +1,5 @@
 import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
-import { SolanaConnectionManager } from './solana-connection';
+import { SolanaConnectionManager } from './solana/connection';
 import type { StrategyInput, StrategyOutput } from './shared';
 
 /**

@@ -1,5 +1,5 @@
-import { strategy } from './strategy';
-import type { StrategyInput, StrategyOutput } from './shared';
+import { strategy } from '../strategy';
+import type { StrategyInput, StrategyOutput } from '../shared';
 
 /**
  * Single activity — runs the user's strategy.

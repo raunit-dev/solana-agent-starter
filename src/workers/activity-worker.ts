@@ -1,5 +1,5 @@
 import { NativeConnection, Worker } from '@temporalio/worker';
-import * as activities from '../activities';
+import * as activities from '../temporal/activities';
 import { TASK_QUEUE_NAME } from '../shared';
 
 async function run() {

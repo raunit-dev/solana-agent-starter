@@ -1,6 +1,6 @@
 import { proxyActivities } from '@temporalio/workflow';
 import type * as activities from './activities';
-import type { StrategyInput, StrategyOutput } from './shared';
+import type { StrategyInput, StrategyOutput } from '../shared';
 
 const { runStrategy } = proxyActivities<typeof activities>({
   startToCloseTimeout: '5 minutes',

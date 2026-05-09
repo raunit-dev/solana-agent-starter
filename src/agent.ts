@@ -1,7 +1,7 @@
 import { ScheduleAlreadyRunning, ScheduleNotFoundError } from '@temporalio/client';
-import { strategyWorkflow } from './workflows';
+import { strategyWorkflow } from './temporal/workflows';
 import { DEFAULT_AGENT_ID, TASK_QUEUE_NAME } from './shared';
-import { TemporalClientManager } from './temporal-client';
+import { TemporalClientManager } from './temporal/client';
 
 const USAGE = `
 usage:

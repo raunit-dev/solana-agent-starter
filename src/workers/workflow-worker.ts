@@ -11,7 +11,7 @@ async function run() {
       connection,
       namespace,
       taskQueue: TASK_QUEUE_NAME,
-      workflowsPath: require.resolve('../workflows'),
+      workflowsPath: require.resolve('../temporal/workflows'),
       identity: `workflow-worker@${process.pid}`,
     });
 

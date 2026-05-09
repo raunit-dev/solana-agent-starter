@@ -1,9 +1,9 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { ScheduleNotFoundError, WorkflowFailedError } from '@temporalio/client';
 import { nanoid } from 'nanoid';
-import { strategyWorkflow } from './workflows';
+import { strategyWorkflow } from './temporal/workflows';
 import { DEFAULT_AGENT_ID, TASK_QUEUE_NAME } from './shared';
-import { TemporalClientManager } from './temporal-client';
+import { TemporalClientManager } from './temporal/client';
 
 class HttpError extends Error {
   constructor(
