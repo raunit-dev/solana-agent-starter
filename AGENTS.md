@@ -68,10 +68,17 @@ Edit `proxyActivities({...})` in `src/workflows.ts`. `startToCloseTimeout` is
 the per-attempt budget. `retry.maximumAttempts` caps total attempts.
 
 ### Add a second strategy / workflow
-1. Add another exported function in `src/activities.ts` (still non-deterministic).
-2. Add a corresponding workflow in `src/workflows.ts` that proxies to it.
+1. Add another exported function in `src/temporal/activities.ts` (still
+   non-deterministic).
+2. Add a corresponding workflow in `src/temporal/workflows.ts` that proxies
+   to it.
 3. Wire it up in `src/server.ts` and/or `src/agent.ts`. Pick a different
    `agentId` so deployments don't collide.
+
+See `walletDeltaWorkflow` + `getWalletSnapshot` / `notify` for a worked
+example: two activity calls with a `workflow.sleep('60 seconds')` in between,
+plus a conditional notification. That sleep is durable — kill the worker
+during it and the workflow resumes when a new one comes online.
 
 ### Change task queue
 Update `TASK_QUEUE_NAME` in `src/shared.ts`. Both workers and the client read
