@@ -5,9 +5,7 @@ export class TemporalClientManager {
   private connection: Connection | null = null;
   private client: Client | null = null;
 
-  private constructor() {
-    // Private — use TemporalClientManager.getInstance() instead.
-  }
+  private constructor() {}
 
   public static getInstance(): TemporalClientManager {
     if (!TemporalClientManager.instance) {
@@ -35,5 +33,3 @@ export class TemporalClientManager {
     this.client = null;
   }
 }
-
-// Usage: const client = await TemporalClientManager.getInstance().getClient();

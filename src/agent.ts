@@ -1,23 +1,49 @@
 import { ScheduleAlreadyRunning, ScheduleNotFoundError } from '@temporalio/client';
-import { strategyWorkflow } from './temporal/workflows';
 import { DEFAULT_AGENT_ID, TASK_QUEUE_NAME } from './shared';
 import { TemporalClientManager } from './temporal/client';
+import { nanoid } from 'nanoid';
+import { DEFAULT_WORKFLOW_TEMPLATE_ID, getWorkflowTemplate, listWorkflowTemplates } from './templates/catalog';
 
 const USAGE = `
 usage:
-  npm run agent -- deploy "<cron>"   # deploy on a schedule, e.g. "*/5 * * * *"
-  npm run agent -- pause             # stop firing on the schedule
-  npm run agent -- resume            # resume firing on the schedule
-  npm run agent -- invoke            # invoke one run right now
-  npm run agent -- status            # show the agent's current schedule + state
-  npm run agent -- list              # list every deployed agent
-  npm run agent -- retire            # tear it down
+  npm run agent -- deploy "<cron>"
+  npm run agent -- pause
+  npm run agent -- resume
+  npm run agent -- invoke
+  npm run agent -- status
+  npm run agent -- list
+  npm run agent -- retire
+  npm run agent -- templates
+  npm run agent -- run [template] [jsonArgs]
 
 env:
   AGENT_ID            (default: ${DEFAULT_AGENT_ID})
+  AGENT_TEMPLATE      (default: ${DEFAULT_WORKFLOW_TEMPLATE_ID})
+  AGENT_ARGS          JSON object used by deploy/run, e.g. '{"address":"..."}'
   TEMPORAL_ADDRESS    (default: localhost:7233)
   TEMPORAL_NAMESPACE  (default: default)
 `.trim();
+
+function parseJsonObject(value: string | undefined, label: string): Record<string, unknown> {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      throw new Error(`${label} must be a JSON object`);
+    }
+    return parsed as Record<string, unknown>;
+  } catch (err) {
+    throw new Error(`${label} is invalid JSON: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
+function resolveWorkflowTemplate(templateId: string | undefined) {
+  try {
+    return getWorkflowTemplate(templateId ?? process.env.AGENT_TEMPLATE ?? DEFAULT_WORKFLOW_TEMPLATE_ID);
+  } catch (err) {
+    throw new Error(err instanceof Error ? err.message : String(err));
+  }
+}
 
 async function main() {
   const cmd = process.argv[2];
@@ -27,13 +53,44 @@ async function main() {
   }
 
   const agentId = process.env.AGENT_ID ?? DEFAULT_AGENT_ID;
+
+  if (cmd === 'templates') {
+    console.log(JSON.stringify(listWorkflowTemplates(), null, 2));
+    return;
+  }
+
   const temporal = TemporalClientManager.getInstance();
   const client = await temporal.getClient();
 
   try {
     switch (cmd) {
+      case 'run': {
+        const template = resolveWorkflowTemplate(process.argv[3]);
+        const args = parseJsonObject(process.argv[4] ?? process.env.AGENT_ARGS, 'jsonArgs');
+        const workflowId = `${template.id}-run-${nanoid()}`;
+        const result = await client.workflow.execute(template.workflowType, {
+          taskQueue: TASK_QUEUE_NAME,
+          workflowId,
+          args: [args],
+        });
+        console.log(
+          JSON.stringify(
+            {
+              workflowId,
+              templateId: template.id,
+              workflowType: template.workflowName,
+              result,
+            },
+            null,
+            2,
+          ),
+        );
+        break;
+      }
       case 'deploy': {
         const cron = process.argv[3];
+        const template = resolveWorkflowTemplate(undefined);
+        const args = parseJsonObject(process.env.AGENT_ARGS, 'AGENT_ARGS');
         if (!cron) {
           console.error('cron expression required, e.g. "*/5 * * * *"');
           process.exit(1);
@@ -48,13 +105,13 @@ async function main() {
           spec: { cronExpressions: [cron] },
           action: {
             type: 'startWorkflow',
-            workflowType: strategyWorkflow,
+            workflowType: template.workflowType,
             taskQueue: TASK_QUEUE_NAME,
-            args: [{}],
+            args: [args],
           },
           policies: { overlap: 'SKIP' },
         });
-        console.log(`deployed agent "${agentId}" with cron "${cron}"`);
+        console.log(`deployed agent "${agentId}" with cron "${cron}" using template "${template.id}"`);
         break;
       }
       case 'pause':

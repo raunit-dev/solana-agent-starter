@@ -1,13 +1,17 @@
-import { proxyActivities, sleep } from '@temporalio/workflow';
-import type * as activities from './activities';
-import type {
-  StrategyInput,
-  StrategyOutput,
-  WalletDeltaInput,
-  WalletDeltaResult,
-} from '../shared';
+// Workflow worker entry point (workflowsPath).
+//
+// The user's custom strategy workflow is defined here directly. Every other
+// workflow lives in its own folder under src/templates/<name>/workflow.ts
+// and is re-exported below so the workflow-worker bundler picks it up.
+//
+// Determinism: ESLint blocks Node builtin imports in this file and in every
+// src/templates/*/workflow.ts file (see .eslintrc.js).
 
-const { runStrategy, getWalletSnapshot, notify } = proxyActivities<typeof activities>({
+import { proxyActivities } from '@temporalio/workflow';
+import type * as activities from './activities';
+import type { StrategyInput, StrategyOutput } from '../shared';
+
+const { runStrategy } = proxyActivities<typeof activities>({
   startToCloseTimeout: '5 minutes',
   retry: {
     initialInterval: '5 seconds',
@@ -17,56 +21,22 @@ const { runStrategy, getWalletSnapshot, notify } = proxyActivities<typeof activi
   },
 });
 
-/**
- * Default workflow — deterministic shell around the user's strategy.
- *
- * Don't do I/O here, don't import Node builtins (ESLint blocks that), don't
- * call `Date.now()` or `fetch`. All of that goes in `src/strategy.ts`.
- */
 export async function strategyWorkflow(input: StrategyInput = {}): Promise<StrategyOutput> {
   return runStrategy(input);
 }
 
-/**
- * Example multi-step workflow — observe a wallet, wait, observe again, notify
- * if the balance changed.
- *
- * This is the kind of thing Temporal makes trivially durable: if the worker
- * dies *during the sleep* or between the two snapshots, the workflow resumes
- * exactly where it left off when a new worker picks it up. No checkpoint
- * tables, no idempotency dance.
- *
- * Invoke programmatically:
- *
- *   await client.workflow.execute(walletDeltaWorkflow, {
- *     taskQueue: TASK_QUEUE_NAME,
- *     workflowId: 'wallet-delta-' + nanoid(),
- *     args: [{ address: 'YOUR_PUBKEY', intervalSeconds: 60 }],
- *   });
- */
-export async function walletDeltaWorkflow(input: WalletDeltaInput): Promise<WalletDeltaResult> {
-  const intervalSeconds = input.intervalSeconds ?? 60;
-
-  const before = await getWalletSnapshot(input.address);
-  await sleep(`${intervalSeconds} seconds`); // durable timer — worker can die during this
-  const after = await getWalletSnapshot(input.address);
-
-  const deltaLamports = after.lamports - before.lamports;
-  const deltaSol = after.sol - before.sol;
-  const changed = deltaLamports !== 0;
-
-  if (changed) {
-    await notify(
-      `wallet ${input.address} changed by ${deltaSol} SOL between slot ${before.slot} and ${after.slot}`,
-    );
-  }
-
-  return {
-    address: input.address,
-    before,
-    after,
-    deltaLamports,
-    deltaSol,
-    changed,
-  };
-}
+export { accountLamportsDeltaWorkflow } from '../templates/account-lamports-delta/workflow';
+export { accountOwnerGuardWorkflow } from '../templates/account-owner-guard/workflow';
+export { epochBoundaryWorkflow } from '../templates/epoch-boundary/workflow';
+export { multiWalletBalanceSweepWorkflow } from '../templates/multi-wallet-balance-sweep/workflow';
+export { programAccountCountWorkflow } from '../templates/program-account-count/workflow';
+export { rentExemptionWorkflow } from '../templates/rent-exemption/workflow';
+export { signatureConfirmationWorkflow } from '../templates/signature-confirmation/workflow';
+export { slotHeartbeatWorkflow } from '../templates/slot-heartbeat/workflow';
+export { tokenBalanceThresholdWorkflow } from '../templates/token-balance-threshold/workflow';
+export { tokenLargestAccountsWorkflow } from '../templates/token-largest-accounts/workflow';
+export { tokenSupplyDeltaWorkflow } from '../templates/token-supply-delta/workflow';
+export { walletBalanceThresholdWorkflow } from '../templates/wallet-balance-threshold/workflow';
+export { walletDeltaWorkflow } from '../templates/wallet-delta/workflow';
+export { walletInactivityWorkflow } from '../templates/wallet-inactivity/workflow';
+export { walletTransactionDigestWorkflow } from '../templates/wallet-transaction-digest/workflow';

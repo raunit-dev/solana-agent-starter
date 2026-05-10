@@ -17,5 +17,3 @@ export class SolanaConnectionManager {
     return SolanaConnectionManager._instance._connection;
   }
 }
-
-// Usage: const conn = SolanaConnectionManager.getInstance();
