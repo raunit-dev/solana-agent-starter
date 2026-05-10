@@ -4,16 +4,42 @@ A small open-source starter for running **Solana agent strategies on
 [Temporal](https://temporal.io)**. Write your strategy as one async function;
 Temporal handles the rest.
 
-## Why Temporal instead of `node-cron` + a process
+## Why Temporal (and not BullMQ + node-cron + try/catch)
 
-- **Schedules out of the box.** Deploy, pause, resume, invoke, retire cron
-  schedules with one API call. No cron table, no leader election.
-- **A run log you didn't have to build.** Every firing of every agent is
-  visible in the Temporal UI — inputs, outputs, errors, timing.
-- **Sane behavior when things crash.** If a runner dies mid-run, Temporal times
-  the run out and marks it failed instead of silently dropping it.
-- **Many runners, one queue.** Spin up more worker pods and they share the
-  load automatically. No "did the same job fire twice?" debugging.
+You can absolutely build this yourself with BullMQ, node-cron, and careful
+error handling. You'll then re-discover, the hard way, what Temporal hands
+you on day one:
+
+- **Durable replay.** If your strategy does `swapA → swapB → settle` and the
+  worker crashes after `swapA`, Temporal resumes from "`swapB` pending" — not
+  from the start. BullMQ re-runs the whole job, which means double-swap
+  hazards unless every step is idempotent against an external ledger.
+- **Per-activity retries with backoff.** Each activity carries its own retry
+  policy that Temporal enforces. No `try/catch` + retry-counter logic mixed
+  into your trading code.
+- **Cron without leader election.** `node-cron` in three pods fires three
+  times. BullMQ repeatable jobs solve it via Redis; Temporal Schedules solve
+  it server-side. Either way, *not* by you writing leader-election code.
+- **Run history is the source of truth.** Every input, output, retry, signal,
+  and timer is appended to durable history you can query and replay. Bull
+  Board shows the last few jobs; Temporal UI shows you exactly what happened
+  on a trade three months ago, frame by frame.
+- **Long waits without a hot worker.** `await workflow.sleep('30 days')` is
+  one line and the worker doesn't have to be alive for those 30 days.
+- **Workflow versioning.** Patch the workflow code without breaking in-flight
+  runs (`workflow.patched`).
+
+If the strategy is "fetch a number every 5 min and tweet it" — this is
+overkill. If it touches money on-chain or runs multi-step flows where
+"crashed halfway" actually matters, this is the boring, well-worn answer
+instead of you reinventing durable execution.
+
+## When this starter is overkill
+
+- One-shot scripts. Just run the script.
+- Read-only dashboards / cron-and-pray monitoring. Use cron.
+- You're already deep in BullMQ for short, idempotent jobs with no multi-step
+  flows. Stay there.
 
 ## What you write vs. what's free
 
